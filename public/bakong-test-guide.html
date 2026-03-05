@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakong QR Payment Test Guide</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .card {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .step {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 5px 5px 0;
+        }
+        .qr-spec {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-10">
+                <h1 class="text-center mb-4">Bakong QR Payment Test Guide</h1>
+                
+                <div class="card p-4">
+                    <h2>Overview</h2>
+                    <p>This guide explains how to test the Bakong QR code payment system for the canteen application. The system generates KHQR (Cambodian QR code standard) that is compatible with the Bakong mobile application.</p>
+                    
+                    <h3 class="mt-4">QR Code Structure</h3>
+                    <div class="qr-spec">
+                        <p>The generated QR code follows the KHQR standard with the following structure:</p>
+                        <ul>
+                            <li><strong>Payload Format Indicator (00)</strong>: 01 (Standard)</li>
+                            <li><strong>Point of Initiation Method (01)</strong>: 12 (Dynamic)</li>
+                            <li><strong>Merchant Account Information (29)</strong>: Contains Bakong-specific data</li>
+                            <li><strong>Transaction Currency (53)</strong>: 840 (USD) or 116 (KHR)</li>
+                            <li><strong>Transaction Amount (54)</strong>: Payment amount</li>
+                            <li><strong>Country Code (58)</strong>: KH (Cambodia)</li>
+                            <li><strong>Additional Data Field (62)</strong>: Reference number</li>
+                            <li><strong>CRC (63)</strong>: 4-character checksum</li>
+                        </ul>
+                    </div>
+                    
+                    <h3 class="mt-4">Testing Steps</h3>
+                    
+                    <div class="step">
+                        <h5>Step 1: Prepare Test Environment</h5>
+                        <ul>
+                            <li>Ensure your .env file has the correct Bakong configuration:</li>
+                            <li><code>BAKONG_TOKEN=your_bakong_token</code></li>
+                            <li><code>BAKONG_ACCOUNT_ID=your_bakong_account_id</code></li>
+                            <li><code>BAKONG_MERCHANT_NAME=Your Merchant Name</code></li>
+                            <li><code>BAKONG_MERCHANT_CITY=Phnom Penh</code></li>
+                            <li><code>BAKONG_IS_TEST=true</code> (for test environment)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="step">
+                        <h5>Step 2: Access the Test Interface</h5>
+                        <ul>
+                            <li>Go to <a href="/bakong-payment">/bakong-payment</a> for the main payment UI</li>
+                            <li>Or go to <a href="/test-bakong-qr">/test-bakong-qr</a> for the QR code testing interface</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="step">
+                        <h5>Step 3: Create a Test Order</h5>
+                        <ul>
+                            <li>If you don't have an existing order, create one through the API or database</li>
+                            <li>Make sure the order has a valid ID and total amount</li>
+                            <li>Example: Order ID = 1, Amount = $10.00</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="step">
+                        <h5>Step 4: Generate QR Code</h5>
+                        <ul>
+                            <li>Enter the order ID and amount in the test interface</li>
+                            <li>Click "Generate QR Code"</li>
+                            <li>The system will create a payment record and generate a KHQR code</li>
+                            <li>The QR code will be displayed on the screen</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="step">
+                        <h5>Step 5: Test QR Code Validity</h5>
+                        <ul>
+                            <li>Use a QR code scanner app to scan the generated code</li>
+                            <li>Verify that it contains the correct merchant information</li>
+                            <li>Verify that it contains the correct amount</li>
+                            <li>Verify that it follows the KHQR format</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="step">
+                        <h5>Step 6: Simulate Payment</h5>
+                        <ul>
+                            <li>Open the Bakong mobile app on your test device</li>
+                            <li>Use the QR scan feature to scan the generated QR code</li>
+                            <li>Complete the payment process in the Bakong app</li>
+                            <li>Verify that the payment is processed correctly</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="step">
+                        <h5>Step 7: Verify Payment Status</h5>
+                        <ul>
+                            <li>Click "Check Payment Status" in the test interface</li>
+                            <li>The system should update the payment status to "paid"</li>
+                            <li>Check the database to confirm the payment record is updated</li>
+                        </ul>
+                    </div>
+                    
+                    <h3 class="mt-4">API Endpoints</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Endpoint</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/api/payments/bakong/initiate</td>
+                                    <td>Initiate a Bakong payment and generate QR code</td>
+                                </tr>
+                                <tr>
+                                    <td>GET</td>
+                                    <td>/api/payments/{id}/verify-bakong</td>
+                                    <td>Check the status of a Bakong payment</td>
+                                </tr>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/api/payments/verify-transaction</td>
+                                    <td>Verify a transaction using MD5 hash</td>
+                                </tr>
+                                <tr>
+                                    <td>POST</td>
+                                    <td>/api/payment/callback</td>
+                                    <td>Handle payment callback from Bakong</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <h3 class="mt-4">Expected QR Code Content</h3>
+                    <p>When scanned, the QR code should contain information in the following format:</p>
+                    <pre class="bg-light p-3">00020101021229370012A0000006770101110215YOUR_ACCOUNT_ID0315MERCHANT_NAME0410MERCHANT_CITY5303840540510.005802KH62140510ORD-12345664140610DESCRIPTION6304XXXX</pre>
+                    
+                    <h3 class="mt-4">Troubleshooting</h3>
+                    <ul>
+                        <li><strong>QR code not generating</strong>: Check your Bakong configuration in .env file</li>
+                        <li><strong>Invalid QR format</strong>: Verify the KHQR library is properly installed and configured</li>
+                        <li><strong>Payment status not updating</strong>: Check the callback endpoint and payment verification logic</li>
+                        <li><strong>Test vs Production</strong>: Ensure BAKONG_IS_TEST is set correctly</li>
+                        <li><strong>Authentication errors</strong>: Make sure you have a valid JWT token for API access</li>
+                    </ul>
+                    
+                    <h3 class="mt-4">Authentication</h3>
+                    <p>The Bakong payment UIs require authentication to access the API endpoints. To get an authentication token:</p>
+                    <ol>
+                        <li>Register a user via <code>POST /api/register</code></li>
+                        <li>Login with credentials via <code>POST /api/login</code></li>
+                        <li>Use the returned JWT token in the Authorization header as <code>Bearer {token}</code></li>
+                        <li>Alternatively, store the token in localStorage as <code>auth_token</code></li>
+                    </ol>
+                    
+                    <p>For easier access, use the <a href="/auth-helper">Authentication Helper</a> page to register/login and automatically store your token.</p>
+                    
+                    <h3 class="mt-4">Order Flow</h3>
+                    <p>The complete payment flow involves:</p>
+                    <ol>
+                        <li>Access the <a href="/menu-items">Menu Items</a> page to select items</li>
+                        <li>Add items to your cart</li>
+                        <li>Proceed to checkout to create an order</li>
+                        <li>Use the Bakong payment UI to pay for your order</li>
+                    </ol>
+                    
+                    <div class="alert alert-info mt-4">
+                        <h5>Important Notes:</h5>
+                        <ul>
+                            <li>This is a test environment - use test credentials only</li>
+                            <li>For actual deployment, switch BAKONG_IS_TEST to false</li>
+                            <li>Always validate payment status before fulfilling orders</li>
+                            <li>Keep transaction references secure for verification purposes</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="/bakong-payment" class="btn btn-primary me-2">Main Payment UI</a>
+                    <a href="/test-bakong-qr" class="btn btn-secondary">QR Code Test</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

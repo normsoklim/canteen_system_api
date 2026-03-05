@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Download Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #074050;
+            border: 1px solid #bee5eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Export Test</h1>
+        
+        <div class="info">
+            <strong>Important:</strong> To properly test PDF export, you need to be logged in to the system and have an API token.
+            The PDF will be downloaded directly to your computer when you click the export button.
+        </div>
+        
+        <form id="exportForm">
+            <div class="form-group">
+                <label for="startDate">Start Date:</label>
+                <input type="date" id="startDate" name="start" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="endDate">End Date:</label>
+                <input type="date" id="endDate" name="end" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="apiToken">API Token:</label>
+                <input type="password" id="apiToken" name="token" placeholder="Enter your JWT token" style="width: 100%;" required>
+            </div>
+            
+            <button type="submit">Export to PDF</button>
+        </form>
+        
+        <div id="result" class="result" style="display: none;"></div>
+        
+        <div class="info">
+            <h3>How to get your API token:</h3>
+            <p>1. Log in to your admin account</p>
+            <p>2. Access your profile to get the JWT token</p>
+            <p>3. Paste the token in the field above</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default dates
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('startDate').valueAsDate = firstDay;
+            document.getElementById('endDate').valueAsDate = today;
+            
+            // Handle form submission
+            document.getElementById('exportForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const token = document.getElementById('apiToken').value;
+                
+                if (!token) {
+                    showResult('Please enter your API token.', 'error');
+                    return;
+                }
+                
+                // Show loading message
+                showResult('Generating PDF report...', 'success');
+                
+                // Create the export URL
+                const exportUrl = `http://localhost:8000/api/reports/export-pdf?start=${startDate}&end=${endDate}`;
+                
+                // Make the API request with proper headers
+                fetch(exportUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/pdf',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // If successful, get the blob and trigger download
+                        return response.blob();
+                    } else {
+                        // If there's an error, get the response text to see what went wrong
+                        return response.text().then(text => {
+                            try {
+                                const errorJson = JSON.parse(text);
+                                throw new Error(errorJson.message || 'Export failed');
+                            } catch (e) {
+                                throw new Error(text || 'Export failed');
+                            }
+                        });
+                    }
+                })
+                .then(blob => {
+                    // Create a download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `sales_report_${startDate}_to_${endDate}.pdf`;
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                    
+                    showResult('PDF export successful! File downloaded.', 'success');
+                })
+                .catch(error => {
+                    console.error('Export error:', error);
+                    showResult(`Export failed: ${error.message}`, 'error');
+                });
+            });
+        });
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}`;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canteen Reports Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .report-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+
+        .report-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+
+        .form-group {
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .export-buttons {
+            margin-top: 10px;
+        }
+
+        .export-buttons button {
+            background-color: #28a745;
+        }
+
+        .export-buttons button:hover {
+            background-color: #218838;
+        }
+
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📊 Canteen Reports Test Interface</h1>
+
+        <div class="report-section">
+            <h3>📈 Dashboard Summary</h3>
+            <button onclick="getDashboard()">Get Dashboard Summary</button>
+            <div id="dashboard-result" class="result"></div>
+        </div>
+
+        <div class="report-section">
+            <h3>💰 Sales & Profit Report</h3>
+            <div class="form-group">
+                <label>Start Date:</label>
+                <input type="date" id="profit-start" value="">
+            </div>
+            <div class="form-group">
+                <label>End Date:</label>
+                <input type="date" id="profit-end" value="">
+            </div>
+            <button onclick="getProfit()">Get Profit Report</button>
+            <div id="profit-result" class="result"></div>
+        </div>
+
+        <div class="report-section">
+            <h3>🏷️ Category Performance</h3>
+            <button onclick="getCategory()">Get Category Performance</button>
+            <div id="category-result" class="result"></div>
+        </div>
+
+        <div class="report-section">
+            <h3>⏰ Hourly Sales</h3>
+            <button onclick="getHourly()">Get Hourly Sales</button>
+            <div id="hourly-result" class="result"></div>
+        </div>
+
+        <div class="report-section">
+            <h3>👥 Staff Performance</h3>
+            <button onclick="getStaff()">Get Staff Performance</button>
+            <div id="staff-result" class="result"></div>
+        </div>
+
+        <div class="report-section">
+            <h3>📥 Export Reports</h3>
+            <div class="form-group">
+                <label>Start Date:</label>
+                <input type="date" id="export-start" value="">
+            </div>
+            <div class="form-group">
+                <label>End Date:</label>
+                <input type="date" id="export-end" value="">
+            </div>
+            <div class="export-buttons">
+                <button onclick="exportExcel()">Export to Excel</button>
+                <button onclick="exportPdf()">Export to PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default dates
+        document.getElementById('profit-start').value = new Date().toISOString().split('T')[0];
+        document.getElementById('profit-end').value = new Date().toISOString().split('T')[0];
+        document.getElementById('export-start').value = new Date().toISOString().split('T')[0];
+        document.getElementById('export-end').value = new Date().toISOString().split('T')[0];
+
+        const baseUrl = window.location.origin;
+        let token = localStorage.getItem('auth_token') || '';
+        
+        // Function to get token from login
+        async function loginAndGetToken() {
+            const email = prompt('Enter email for login (e.g., admin@example.com):');
+            if (!email) return;
+            
+            const password = prompt('Enter password (e.g., password):');
+            if (!password) return;
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    token = data.token || data.access_token;
+                    localStorage.setItem('auth_token', token);
+                    alert('Login successful! Token saved.');
+                } else {
+                    alert('Login failed: ' + (data.message || 'Invalid credentials'));
+                }
+            } catch (error) {
+                alert('Login error: ' + error.message);
+            }
+        }
+
+        async function apiCall(endpoint, params = {}) {
+            // Check if token exists, if not prompt for login
+            if (!token) {
+                const loginResult = confirm('No token found. Would you like to login first?');
+                if (loginResult) {
+                    await loginAndGetToken();
+                    if (!token) {
+                        throw new Error('No token available. Please login first.');
+                    }
+                } else {
+                    throw new Error('No token available. Please login first.');
+                }
+            }
+            
+            const url = new URL(`${baseUrl}/api${endpoint}`);
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Token might be expired, prompt for re-login
+                        alert('Token expired or invalid. Please login again.');
+                        await loginAndGetToken();
+                        if (token) {
+                            // Retry the request with new token
+                            return await apiCall(endpoint, params);
+                        }
+                    }
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        async function downloadFile(endpoint, params = {}) {
+            // Check if token exists, if not prompt for login
+            if (!token) {
+                const loginResult = confirm('No token found. Would you like to login first?');
+                if (loginResult) {
+                    await loginAndGetToken();
+                    if (!token) {
+                        alert('No token available. Cannot download file.');
+                        return;
+                    }
+                } else {
+                    alert('No token available. Cannot download file.');
+                    return;
+                }
+            }
+            
+            const url = new URL(`${baseUrl}/api${endpoint}`);
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Token might be expired, prompt for re-login
+                        alert('Token expired or invalid. Please login again.');
+                        await loginAndGetToken();
+                        if (token) {
+                            // Retry the request with new token
+                            await downloadFile(endpoint, params);
+                            return;
+                        }
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = response.headers.get('content-disposition')?.split('filename=')[1] || 'report';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Download Error:', error);
+                alert('Download failed: ' + error.message);
+            }
+        }
+
+        async function getDashboard() {
+            showLoading('dashboard-result');
+            try {
+                const data = await apiCall('/reports/dashboard');
+                displayResult('dashboard-result', data);
+            } catch (error) {
+                displayError('dashboard-result', error.message);
+            }
+        }
+
+        async function getProfit() {
+            showLoading('profit-result');
+            const start = document.getElementById('profit-start').value;
+            const end = document.getElementById('profit-end').value;
+
+            try {
+                const data = await apiCall('/reports/profit', { start, end });
+                displayResult('profit-result', data);
+            } catch (error) {
+                displayError('profit-result', error.message);
+            }
+        }
+
+        async function getCategory() {
+            showLoading('category-result');
+            try {
+                const data = await apiCall('/reports/category');
+                displayResult('category-result', data);
+            } catch (error) {
+                displayError('category-result', error.message);
+            }
+        }
+
+        async function getHourly() {
+            showLoading('hourly-result');
+            try {
+                const data = await apiCall('/reports/hourly');
+                displayResult('hourly-result', data);
+            } catch (error) {
+                displayError('hourly-result', error.message);
+            }
+        }
+
+        async function getStaff() {
+            showLoading('staff-result');
+            try {
+                const data = await apiCall('/reports/staff');
+                displayResult('staff-result', data);
+            } catch (error) {
+                displayError('staff-result', error.message);
+            }
+        }
+
+        async function exportExcel() {
+            const start = document.getElementById('export-start').value;
+            const end = document.getElementById('export-end').value;
+            await downloadFile('/reports/export-excel', { start, end });
+        }
+
+        async function exportPdf() {
+            const start = document.getElementById('export-start').value;
+            const end = document.getElementById('export-end').value;
+            await downloadFile('/reports/export-pdf', { start, end });
+        }
+
+        function showLoading(elementId) {
+            document.getElementById(elementId).innerHTML = 'Loading...';
+            document.getElementById(elementId).className = 'result';
+        }
+
+        function displayResult(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = JSON.stringify(data, null, 2);
+            element.className = 'result success';
+        }
+
+        function displayError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = 'Error: ' + message;
+            element.className = 'result error';
+        }
+
+        // Add a helper function to login and get token
+        function setToken() {
+            loginAndGetToken();
+        }
+
+        // Add token helper to the page
+        document.addEventListener('DOMContentLoaded', function () {
+            const header = document.querySelector('h1');
+            const tokenBtn = document.createElement('button');
+            tokenBtn.textContent = 'Login & Get Token';
+            tokenBtn.style.float = 'right';
+            tokenBtn.style.marginTop = '-40px';
+            tokenBtn.onclick = setToken;
+            header.appendChild(tokenBtn);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Helper - Bakong Payment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .card {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .result-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .token-display {
+            word-break: break-all;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8">
+                <h1 class="text-center mb-4">Authentication Helper</h1>
+                
+                <div class="card p-4">
+                    <h3 class="text-center mb-4">Login to Access Bakong Payment</h3>
+                    
+                    <ul class="nav nav-tabs mb-4" id="authTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">Login</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">Register</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="authTabContent">
+                        <!-- Login Tab -->
+                        <div class="tab-pane fade show active" id="login" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="login-email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="login-email" placeholder="Enter your email">
+                            </div>
+                            <div class="mb-3">
+                                <label for="login-password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="login-password" placeholder="Enter your password">
+                            </div>
+                            <button id="login-btn" class="btn btn-primary w-100">Login</button>
+                        </div>
+                        
+                        <!-- Register Tab -->
+                        <div class="tab-pane fade" id="register" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="register-name" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="register-name" placeholder="Enter your full name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="register-email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="register-email" placeholder="Enter your email">
+                            </div>
+                            <div class="mb-3">
+                                <label for="register-password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="register-password" placeholder="Enter your password">
+                            </div>
+                            <div class="mb-3">
+                                <label for="register-password-confirm" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="register-password-confirm" placeholder="Confirm your password">
+                            </div>
+                            <button id="register-btn" class="btn btn-success w-100">Register</button>
+                        </div>
+                    </div>
+                    
+                    <div class="result-box">
+                        <h5>API Response:</h5>
+                        <pre id="api-response" style="white-space: pre-wrap;">Login or register to get your authentication token...</pre>
+                    </div>
+                    
+                    <div id="token-section" class="hidden">
+                        <h5>Authentication Token:</h5>
+                        <div class="token-display" id="auth-token"></div>
+                        <div class="alert alert-success mt-3">
+                            <strong>Token stored!</strong> Your token has been saved in browser storage and will be used automatically in payment UIs.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="/bakong-payment" class="btn btn-primary">Go to Bakong Payment</a>
+                            <a href="/test-bakong-qr" class="btn btn-info">Go to QR Test</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4>How to Use:</h4>
+                    <ol>
+                        <li><strong>Register</strong> (if you don't have an account) or <strong>Login</strong> with existing credentials</li>
+                        <li>Copy the authentication token that appears after successful login</li>
+                        <li>The token is automatically stored in your browser</li>
+                        <li>Access the Bakong payment UIs - they will use the stored token</li>
+                    </ol>
+                    
+                    <div class="alert alert-info mt-3">
+                        <strong>Note:</strong> For testing purposes, you can also manually store the token in your browser's localStorage with the key <code>auth_token</code>.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginBtn = document.getElementById('login-btn');
+            const registerBtn = document.getElementById('register-btn');
+            const apiResponse = document.getElementById('api-response');
+            const tokenSection = document.getElementById('token-section');
+            const authTokenDisplay = document.getElementById('auth-token');
+            
+            // Login functionality
+            loginBtn.addEventListener('click', async function() {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                
+                if (!email || !password) {
+                    alert('Please enter both email and password');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        // Store the token
+                        localStorage.setItem('auth_token', data.token);
+                        sessionStorage.setItem('auth_token', data.token);
+                        
+                        // Display token
+                        authTokenDisplay.textContent = data.token;
+                        tokenSection.classList.remove('hidden');
+                        
+                        apiResponse.textContent = JSON.stringify({
+                            message: 'Login successful',
+                            token: '*** HIDDEN FOR SECURITY ***'
+                        }, null, 2);
+                        
+                        // Redirect to menu items page after a short delay
+                        setTimeout(() => {
+                            window.location.href = '/menu-items';
+                        }, 1500);
+                    } else {
+                        apiResponse.textContent = JSON.stringify({
+                            error: data.message || 'Login failed',
+                            details: data
+                        }, null, 2);
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    apiResponse.textContent = JSON.stringify({
+                        error: 'Network error',
+                        message: error.message
+                    }, null, 2);
+                }
+            });
+            
+            // Register functionality
+            registerBtn.addEventListener('click', async function() {
+                const name = document.getElementById('register-name').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const passwordConfirm = document.getElementById('register-password-confirm').value;
+                
+                if (!name || !email || !password || !passwordConfirm) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+                
+                if (password !== passwordConfirm) {
+                    alert('Passwords do not match');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    alert('Password must be at least 6 characters');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: name,
+                            email: email,
+                            password: password,
+                            password_confirmation: passwordConfirm
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        // Auto-login after registration
+                        const loginResponse = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                email: email,
+                                password: password
+                            })
+                        });
+                        
+                        const loginData = await loginResponse.json();
+                        
+                        if (loginResponse.ok) {
+                            // Store the token
+                            localStorage.setItem('auth_token', loginData.token);
+                            sessionStorage.setItem('auth_token', loginData.token);
+                            
+                            // Display token
+                            authTokenDisplay.textContent = loginData.token;
+                            tokenSection.classList.remove('hidden');
+                            
+                            apiResponse.textContent = JSON.stringify({
+                                message: 'Registration and login successful',
+                                token: '*** HIDDEN FOR SECURITY ***'
+                            }, null, 2);
+                            
+                            // Redirect to menu items page after a short delay
+                            setTimeout(() => {
+                                window.location.href = '/menu-items';
+                            }, 1500);
+                        } else {
+                            apiResponse.textContent = JSON.stringify({
+                                message: 'Registration successful, but auto-login failed',
+                                login_error: loginData.message
+                            }, null, 2);
+                        }
+                    } else {
+                        apiResponse.textContent = JSON.stringify({
+                            error: data.message || 'Registration failed',
+                            details: data
+                        }, null, 2);
+                    }
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    apiResponse.textContent = JSON.stringify({
+                        error: 'Network error',
+                        message: error.message
+                    }, null, 2);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

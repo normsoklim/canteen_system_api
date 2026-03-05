@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bakong QR Code</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .card {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .qr-code {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-pending {
+            background-color: #ffc107;
+        }
+        .status-paid {
+            background-color: #28a745;
+        }
+        .status-failed {
+            background-color: #dc3545;
+        }
+        .result-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8">
+                <h1 class="text-center mb-4">Test Bakong QR Code Generator</h1>
+                
+                <div class="card p-4">
+                    <h3 class="text-center mb-4">Generate Test QR Code</h3>
+                    
+                    <div class="mb-3">
+                        <label for="order-id" class="form-label">Order ID</label>
+                        <input type="text" class="form-control" id="order-id" value="1" placeholder="Enter order ID">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount (USD)</label>
+                        <input type="number" class="form-control" id="amount" value="10.00" step="0.01" min="0.01" placeholder="Enter amount">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" value="Test Order" placeholder="Enter description">
+                    </div>
+                    
+                    <button id="generate-btn" class="btn btn-primary w-100 mb-3">Generate QR Code</button>
+                    
+                    <div id="result-section" class="hidden">
+                        <h4 class="text-center">Generated QR Code</h4>
+                        
+                        <div class="qr-container">
+                            <div class="qr-code">
+                                <img id="qr-code-img" src="" alt="Bakong QR Code" style="max-width: 100%; max-height: 100%;">
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <span class="status-indicator status-pending" id="status-indicator"></span>
+                            <strong>Status:</strong> 
+                            <span id="payment-status">Pending</span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="check-status-btn" class="btn btn-success">Check Payment Status</button>
+                            <button id="verify-transaction-btn" class="btn btn-info">Verify Transaction</button>
+                        </div>
+                    </div>
+                    
+                    <div class="result-box">
+                        <h5>API Response:</h5>
+                        <pre id="api-response" style="white-space: pre-wrap; word-break: break-all;">Enter details and click "Generate QR Code" to see API response here...</pre>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4>How to Test QR Code:</h4>
+                    <ol>
+                        <li>Enter order details (ID, amount, description)</li>
+                        <li>Click "Generate QR Code" to create a Bakong QR code</li>
+                        <li>Scan the QR code with your Bakong app to simulate payment</li>
+                        <li>Click "Check Payment Status" to verify if payment was made</li>
+                        <li>Use "Verify Transaction" to check transaction details</li>
+                    </ol>
+                    
+                    <h5 class="mt-3">QR Code Validation:</h5>
+                    <p>The generated QR code contains all necessary payment information in the proper KHQR format. When scanned with a Bakong-compatible app, it should:</p>
+                    <ul>
+                        <li>Open the Bakong app</li>
+                        <li>Show merchant information (name, city)</li>
+                        <li>Show the correct payment amount</li>
+                        <li>Allow user to confirm and complete the payment</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const generateBtn = document.getElementById('generate-btn');
+            const checkStatusBtn = document.getElementById('check-status-btn');
+            const verifyTransactionBtn = document.getElementById('verify-transaction-btn');
+            const qrCodeImg = document.getElementById('qr-code-img');
+            const resultSection = document.getElementById('result-section');
+            const apiResponse = document.getElementById('api-response');
+            const paymentStatus = document.getElementById('payment-status');
+            const statusIndicator = document.getElementById('status-indicator');
+            
+            let paymentId = null;
+            let transactionRef = null;
+            
+            // Function to get auth token from localStorage or sessionStorage
+            function getAuthToken() {
+                // Try to get token from localStorage first, then sessionStorage
+                return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || '';
+            }
+            
+            // Function to set auth token
+            function setAuthToken(token) {
+                localStorage.setItem('auth_token', token);
+            }
+            
+            generateBtn.addEventListener('click', async function() {
+                const orderId = document.getElementById('order-id').value;
+                const amount = document.getElementById('amount').value;
+                const description = document.getElementById('description').value;
+                
+                if (!orderId || !amount) {
+                    alert('Please enter order ID and amount');
+                    return;
+                }
+                
+                try {
+                    // Show loading state
+                    generateBtn.disabled = true;
+                    generateBtn.textContent = 'Generating...';
+                    
+                    // Call API to generate QR code
+                    const response = await fetch('/api/payments/bakong/initiate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        },
+                        body: JSON.stringify({
+                            order_id: orderId
+                        })
+                    });
+                    
+                    // Check if response is OK before parsing JSON
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        apiResponse.textContent = `API Error: ${response.status} - ${response.statusText}`;
+                        alert(`API Error: ${response.status} - ${response.statusText}`);
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    apiResponse.textContent = JSON.stringify(data, null, 2);
+                    
+                    if (data.success || data.data) {
+                        paymentId = data.data.payment_id;
+                        transactionRef = data.data.payment_id; // We'll use payment ID to check status
+                        qrCodeImg.src = data.data.qr_code;
+                        
+                        // Show result section
+                        resultSection.classList.remove('hidden');
+                        
+                        // Update status
+                        updatePaymentStatus('pending');
+                    } else {
+                        alert('Error: ' + (data.message || data.error || 'Failed to generate QR code'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    apiResponse.textContent = 'Error: ' + error.message;
+                } finally {
+                    // Reset button
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate QR Code';
+                }
+            });
+            
+            checkStatusBtn.addEventListener('click', async function() {
+                if (!paymentId) {
+                    alert('Please generate a QR code first');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/payments/${paymentId}/verify-bakong`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        }
+                    });
+                    
+                    // Check if response is OK before parsing JSON
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        apiResponse.textContent = `API Error: ${response.status} - ${response.statusText}`;
+                        alert(`API Error: ${response.status} - ${response.statusText}`);
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    apiResponse.textContent = JSON.stringify(data, null, 2);
+                    
+                    if (data.success || data.data) {
+                        updatePaymentStatus(data.data.payment_status);
+                    } else {
+                        alert('Error: ' + (data.message || data.error || 'Failed to check payment status'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    apiResponse.textContent = 'Error: ' + error.message;
+                }
+            });
+            
+            verifyTransactionBtn.addEventListener('click', async function() {
+                if (!transactionRef) {
+                    alert('Please generate a QR code first');
+                    return;
+                }
+                
+                try {
+                    // For this test, we'll use the payment ID as the transaction reference
+                    // In a real implementation, you would use the actual transaction reference
+                    const response = await fetch('/api/payments/verify-transaction', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        },
+                        body: JSON.stringify({
+                            md5: transactionRef // This would be the actual MD5 hash in a real implementation
+                        })
+                    });
+                    
+                    // Check if response is OK before parsing JSON
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        apiResponse.textContent = `API Error: ${response.status} - ${response.statusText}`;
+                        alert(`API Error: ${response.status} - ${response.statusText}`);
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    apiResponse.textContent = JSON.stringify(data, null, 2);
+                    
+                    if (!response.ok) {
+                        alert('Error: ' + (data.message || data.error || 'Failed to verify transaction'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    apiResponse.textContent = 'Error: ' + error.message;
+                }
+            });
+            
+            function updatePaymentStatus(status) {
+                paymentStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                
+                statusIndicator.className = 'status-indicator';
+                if (status === 'paid') {
+                    statusIndicator.classList.add('status-paid');
+                } else if (status === 'failed') {
+                    statusIndicator.classList.add('status-failed');
+                } else {
+                    statusIndicator.classList.add('status-pending');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

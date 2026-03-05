@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakong QR Payment System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .payment-card {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .qr-code {
+            width: 250px;
+            height: 250px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-pending {
+            background-color: #ffc107;
+        }
+        .status-paid {
+            background-color: #28a745;
+        }
+        .status-failed {
+            background-color: #dc3545;
+        }
+        .payment-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .payment-success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .payment-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .timer {
+            font-size: 14px;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8">
+                <h1 class="text-center mb-4">Bakong QR Payment System</h1>
+                
+                <div class="payment-card p-4">
+                    <h3 class="text-center mb-4">Payment Details</h3>
+                    
+                    <div class="payment-info">
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Order ID:</strong>
+                                <div id="order-id">#ORD-001</div>
+                            </div>
+                            <div class="col-6">
+                                <strong>Amount:</strong>
+                                <div id="payment-amount">$15.50</div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <strong>Description:</strong>
+                                <div id="payment-description">Food Order Payment</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="payment-form">
+                        <div class="mb-3">
+                            <label for="order-id-input" class="form-label">Order ID</label>
+                            <input type="text" class="form-control" id="order-id-input" value="1" placeholder="Enter order ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="amount-input" class="form-label">Amount (USD)</label>
+                            <input type="number" class="form-control" id="amount-input" value="15.50" step="0.01" min="0.01" placeholder="Enter amount">
+                        </div>
+                        <div class="mb-3">
+                            <label for="description-input" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description-input" value="Food Order Payment" placeholder="Enter description">
+                        </div>
+                        <button id="generate-btn" class="btn btn-primary w-100">Generate QR Code</button>
+                    </div>
+                    
+                    <div id="qr-section" class="hidden">
+                        <h4 class="text-center mt-3">Scan QR Code to Pay</h4>
+                        <div class="qr-container">
+                            <div class="qr-code">
+                                <img id="qr-code-img" src="" alt="Bakong QR Code" style="max-width: 100%; max-height: 100%;">
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <span class="status-indicator status-pending" id="status-indicator"></span>
+                            <strong>Status:</strong> 
+                            <span id="payment-status">Pending</span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="check-status-btn" class="btn btn-success">Check Payment Status</button>
+                            <button id="new-payment-btn" class="btn btn-secondary">New Payment</button>
+                        </div>
+                        
+                        <div class="timer">
+                            <span id="timer">Time remaining: 10:00</span>
+                        </div>
+                    </div>
+                    
+                    <div id="success-message" class="payment-success hidden">
+                        <h5>Payment Successful!</h5>
+                        <p>Thank you for your payment. Your order has been confirmed.</p>
+                    </div>
+                    
+                    <div id="error-message" class="payment-error hidden">
+                        <h5>Payment Error</h5>
+                        <p id="error-text">An error occurred during payment processing.</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4>How to Test:</h4>
+                    <ol>
+                        <li>Enter order details (ID, amount, description)</li>
+                        <li>Click "Generate QR Code"</li>
+                        <li>Scan the QR code with your Bakong app</li>
+                        <li>Complete the payment in your Bakong app</li>
+                        <li>Click "Check Payment Status" to verify</li>
+                    </ol>
+                    <p><strong>Note:</strong> This is a test environment. Use test credentials for Bakong.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const paymentForm = document.getElementById('payment-form');
+            const qrSection = document.getElementById('qr-section');
+            const generateBtn = document.getElementById('generate-btn');
+            const checkStatusBtn = document.getElementById('check-status-btn');
+            const newPaymentBtn = document.getElementById('new-payment-btn');
+            const qrCodeImg = document.getElementById('qr-code-img');
+            const paymentStatus = document.getElementById('payment-status');
+            const statusIndicator = document.getElementById('status-indicator');
+            const successMessage = document.getElementById('success-message');
+            const errorMessage = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const timerElement = document.getElementById('timer');
+            
+            // Form inputs
+            const orderIdInput = document.getElementById('order-id-input');
+            const amountInput = document.getElementById('amount-input');
+            const descriptionInput = document.getElementById('description-input');
+            
+            // Display elements
+            const orderIdDisplay = document.getElementById('order-id');
+            const amountDisplay = document.getElementById('payment-amount');
+            const descriptionDisplay = document.getElementById('payment-description');
+            
+            let paymentId = null;
+            let timer = null;
+            let timeLeft = 600; // 10 minutes in seconds
+            
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderIdFromUrl = urlParams.get('order_id');
+            
+            // If order_id is in URL, pre-fill the order ID field and automatically initiate payment
+            if (orderIdFromUrl) {
+                orderIdInput.value = orderIdFromUrl;
+                
+                // Automatically initiate payment after a short delay to allow UI to update
+                setTimeout(() => {
+                    // Get order details to pre-fill amount and description
+                    getOrderDetails(orderIdFromUrl).then(orderData => {
+                        if (orderData) {
+                            // Check if the order has a valid total amount before proceeding
+                            if (!orderData.total_amount || orderData.total_amount <= 0) {
+                                showError(`Invalid order total amount: ${orderData.total_amount}. Please check that your order has valid items and quantities.`);
+                                console.error('Invalid order total amount:', orderData);
+                                return;
+                            }
+                            
+                            amountInput.value = orderData.total_amount || '';
+                            descriptionInput.value = `Order Payment #${orderIdFromUrl}`;
+                            
+                            // Automatically click the generate button
+                            generateBtn.click();
+                        }
+                    }).catch(error => {
+                        console.error('Error getting order details:', error);
+                        // Still try to generate with just the order ID
+                        amountInput.value = '';
+                        descriptionInput.value = `Order Payment #${orderIdFromUrl}`;
+                        generateBtn.click();
+                    });
+                }, 500);
+            }
+            
+            // Function to get order details
+            async function getOrderDetails(orderId) {
+                try {
+                    const response = await fetch(`/api/customer/orders/${orderId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data.data;
+                } catch (error) {
+                    console.error('Error fetching order details:', error);
+                    return null;
+                }
+            }
+            
+            // Function to get auth token from localStorage or sessionStorage
+            function getAuthToken() {
+                // Try to get token from localStorage first, then sessionStorage
+                return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || '';
+            }
+            
+            // Function to set auth token
+            function setAuthToken(token) {
+                localStorage.setItem('auth_token', token);
+            }
+            
+            // Generate QR code
+            generateBtn.addEventListener('click', async function() {
+                const orderId = orderIdInput.value;
+                const amount = amountInput.value;
+                const description = descriptionInput.value;
+                
+                if (!orderId || !amount) {
+                    showError('Please enter order ID and amount');
+                    return;
+                }
+                
+                try {
+                    showLoading(true);
+                    
+                    // Update display
+                    orderIdDisplay.textContent = `#ORD-${orderId}`;
+                    amountDisplay.textContent = `$${parseFloat(amount).toFixed(2)}`;
+                    descriptionDisplay.textContent = description;
+                    
+                    // First, get the order details to validate the total amount
+                    const orderResponse = await fetch(`/api/customer/orders/${orderId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        }
+                    });
+                    
+                    if (!orderResponse.ok) {
+                        const errorText = await orderResponse.text();
+                        console.error('Order fetch error:', errorText);
+                        showError(`Failed to fetch order details: ${orderResponse.status} - ${orderResponse.statusText}`);
+                        return;
+                    }
+                    
+                    const orderData = await orderResponse.json();
+                    const order = orderData.data;
+                    
+                    // Validate order total amount before initiating payment
+                    if (!order.total_amount || order.total_amount <= 0) {
+                        showError(`Invalid order total amount: ${order.total_amount}. Please check that your order has valid items and quantities.`);
+                        console.error('Invalid order total amount:', order);
+                        return;
+                    }
+                    
+                    // Call API to generate QR code using the custom endpoint with enhanced validation
+                    const response = await fetch('/api/payments/bakong/initiate-custom', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        },
+                        body: JSON.stringify({
+                            order_id: orderId
+                        })
+                    });
+                    
+                    // Check if response is OK before parsing JSON
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        showError(`API Error: ${response.status} - ${response.statusText}`);
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && (data.success || data.data)) {
+                        paymentId = data.data.payment_id;
+                        qrCodeImg.src = data.data.qr_code;
+                        
+                        // Show QR section
+                        paymentForm.classList.add('hidden');
+                        qrSection.classList.remove('hidden');
+                        successMessage.classList.add('hidden');
+                        errorMessage.classList.add('hidden');
+                        
+                        // Start payment status checking
+                        startStatusChecking();
+                        
+                        // Start timer
+                        startTimer();
+                    } else {
+                        // Check if it's the specific KHQR error
+                        if (data.error && data.error.includes('Amount is invalid')) {
+                            showError('Payment amount is invalid. The order total may not have been calculated properly. Please check that your order has valid items and quantities.');
+                        } else {
+                            showError(data.message || data.error || 'Failed to generate QR code');
+                        }
+                        console.error('Payment initiation error:', data);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError('An error occurred while generating QR code');
+                } finally {
+                    showLoading(false);
+                }
+            });
+            
+            // Check payment status
+            checkStatusBtn.addEventListener('click', checkPaymentStatus);
+            
+            // New payment
+            newPaymentBtn.addEventListener('click', function() {
+                paymentForm.classList.remove('hidden');
+                qrSection.classList.add('hidden');
+                successMessage.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+                
+                // Reset form
+                orderIdInput.value = '';
+                amountInput.value = '';
+                descriptionInput.value = '';
+                
+                // Clear timer
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                    timeLeft = 600;
+                    timerElement.textContent = 'Time remaining: 10:00';
+                }
+            });
+            
+            // Check payment status function
+            async function checkPaymentStatus() {
+                if (!paymentId) return;
+                
+                try {
+                    const response = await fetch(`/api/payments/${paymentId}/verify-bakong`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + getAuthToken()
+                        }
+                    });
+                    
+                    // Check if response is OK before parsing JSON
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        showError(`API Error: ${response.status} - ${response.statusText}`);
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success || data.data) {
+                        updatePaymentStatus(data.data.payment_status);
+                        
+                        if (data.data.payment_status === 'paid') {
+                            showSuccess();
+                            if (timer) {
+                                clearInterval(timer);
+                            }
+                        }
+                    } else {
+                        showError(data.message || data.error || 'Failed to check payment status');
+                    }
+                } catch (error) {
+                    console.error('Error checking status:', error);
+                    showError('An error occurred while checking payment status');
+                }
+            }
+            
+            // Update payment status display
+            function updatePaymentStatus(status) {
+                paymentStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                
+                statusIndicator.className = 'status-indicator';
+                if (status === 'paid') {
+                    statusIndicator.classList.add('status-paid');
+                } else if (status === 'failed') {
+                    statusIndicator.classList.add('status-failed');
+                } else {
+                    statusIndicator.classList.add('status-pending');
+                }
+            }
+            
+            // Start status checking
+            function startStatusChecking() {
+                // Check status immediately
+                checkPaymentStatus();
+                
+                // Then check every 5 seconds
+                setInterval(checkPaymentStatus, 5000);
+            }
+            
+            // Start timer
+            function startTimer() {
+                timerElement.textContent = `Time remaining: ${formatTime(timeLeft)}`;
+                
+                timer = setInterval(() => {
+                    timeLeft--;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        timerElement.textContent = 'Time expired';
+                        showError('Payment time has expired. Please try again.');
+                    } else {
+                        timerElement.textContent = `Time remaining: ${formatTime(timeLeft)}`;
+                    }
+                }, 1000);
+            }
+            
+            // Format time as MM:SS
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            
+            // Show success message
+            function showSuccess() {
+                successMessage.classList.remove('hidden');
+                qrSection.classList.add('hidden');
+            }
+            
+            // Show error message
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.classList.remove('hidden');
+            }
+            
+            // Show/hide loading state
+            function showLoading(show) {
+                if (show) {
+                    generateBtn.disabled = true;
+                    generateBtn.textContent = 'Generating...';
+                } else {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate QR Code';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

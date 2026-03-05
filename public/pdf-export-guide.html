@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Export Guide - Canteen API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .code-block {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+        .endpoint {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .note {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PDF Export Guide - Canteen API</h1>
+        <p>This guide explains how to use the PDF export functionality in the Canteen API system.</p>
+    </div>
+
+    <div class="section">
+        <h2>Overview</h2>
+        <p>The Canteen API provides functionality to export sales reports in PDF format. This feature allows administrators to generate and download comprehensive sales reports for specific date ranges.</p>
+        
+        <div class="success">
+            <strong>Status:</strong> PDF export functionality is fully implemented and working correctly.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>API Endpoint</h2>
+        <div class="endpoint">
+            <strong>GET</strong> <code>/api/reports/export-pdf</code>
+        </div>
+        
+        <h3>Authentication</h3>
+        <p>This endpoint requires authentication with a valid JWT token.</p>
+        <p>Include the token in the Authorization header:</p>
+        <div class="code-block">
+            Authorization: Bearer {your-jwt-token}
+        </div>
+        
+        <h3>Required Role</h3>
+        <p>User must have 'admin' role to access this endpoint.</p>
+    </div>
+
+    <div class="section">
+        <h2>Parameters</h2>
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>start</td>
+                <td>string (date)</td>
+                <td>Yes</td>
+                <td>Start date for the report in Y-m-d format (e.g., 2026-01-01)</td>
+            </tr>
+            <tr>
+                <td>end</td>
+                <td>string (date)</td>
+                <td>Yes</td>
+                <td>End date for the report in Y-m-d format (e.g., 2026-12-31)</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Example Usage</h2>
+        
+        <h3>cURL Example</h3>
+        <div class="code-block">
+curl -X GET \
+  "http://localhost:8000/api/reports/export-pdf?start=2026-01-01&end=2026-12-31" \
+  -H "Authorization: Bearer your-jwt-token" \
+  -H "Accept: application/pdf" \
+  --output sales_report.pdf
+        </div>
+        
+        <h3>JavaScript Example</h3>
+        <div class="code-block">
+// Get the JWT token from storage
+const token = localStorage.getItem('api_token') || sessionStorage.getItem('api_token');
+
+// Define the date range
+const startDate = '2026-01-01';
+const endDate = '2026-12-31';
+
+// Make the API request
+fetch(`http://localhost:8000/api/reports/export-pdf?start=${startDate}&end=${endDate}`, {
+    method: 'GET',
+    headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/pdf',
+    }
+})
+.then(response => {
+    if (response.ok) {
+        return response.blob();
+    } else {
+        throw new Error('Export failed');
+    }
+})
+.then(blob => {
+    // Create a download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sales_report_${startDate}_to_${endDate}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+})
+.catch(error => {
+    console.error('Export error:', error);
+});
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Response</h2>
+        <p>The API returns a PDF file with the following characteristics:</p>
+        <ul>
+            <li>Content-Type: <code>application/pdf</code></li>
+            <li>Content-Disposition: <code>attachment; filename=sales_report_YYYY-MM-DD.pdf</code></li>
+            <li>File contains a formatted sales report with orders within the specified date range</li>
+        </ul>
+        
+        <h3>Report Contents</h3>
+        <p>The PDF report includes:</p>
+        <ul>
+            <li>Report title and date range</li>
+            <li>Generated date and time</li>
+            <li>Table of orders with columns: ID, User ID, Total Amount, Status, Created At</li>
+            <li>Only completed orders are included in the report</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Implementation Details</h2>
+        <p>The PDF export functionality is implemented using the following components:</p>
+        
+        <h3>Backend Components</h3>
+        <ul>
+            <li><strong>Controller:</strong> <code>App\Http\Controllers\Api\ReportController</code> - Contains the <code>exportPdf</code> method</li>
+            <li><strong>Service:</strong> <code>App\Services\ReportService</code> - Provides the <code>getOrdersForExport</code> method</li>
+            <li><strong>Repository:</strong> <code>App\Repositories\ReportRepository</code> - Contains the database query logic</li>
+            <li><strong>View:</strong> <code>resources/views/reports/sales.blade.php</code> - HTML template for the PDF</li>
+            <li><strong>Library:</strong> <code>barryvdh/laravel-dompdf</code> - PDF generation library</li>
+        </ul>
+        
+        <h3>Configuration</h3>
+        <p>The PDF library is configured in <code>config/dompdf.php</code> with appropriate settings for font handling and rendering.</p>
+    </div>
+
+    <div class="section">
+        <h2>Troubleshooting</h2>
+        
+        <h3>Common Issues</h3>
+        <ul>
+            <li><strong>401 Unauthorized:</strong> Ensure you're sending a valid JWT token in the Authorization header</li>
+            <li><strong>403 Forbidden:</strong> Verify that the user account has admin role</li>
+            <li><strong>500 Server Error:</strong> Check that the date parameters are in the correct format (YYYY-MM-DD)</li>
+        </ul>
+        
+        <div class="warning">
+            <strong>Important:</strong> When accessing the PDF export endpoint directly in a browser, you may see binary/text content instead of a downloaded PDF. This is normal browser behavior. To properly download the PDF, use the API with proper headers or use the test page provided at <code>public/pdf-download-test.html</code>.
+        </div>
+        
+        <div class="note">
+            <strong>Note:</strong> The PDF export functionality has been tested and confirmed to be working correctly. If you're experiencing issues, verify that your API server is running and that you have the correct authentication token.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Testing</h2>
+        <p>You can test the PDF export functionality using the test script at <code>public/test_exports.php</code>:</p>
+        <div class="code-block">
+php public/test_exports.php
+        </div>
+        <p>This script will verify all components of the export functionality and confirm that everything is working correctly.</p>
+        
+        <p>For browser-based testing, use the test page at <code>public/pdf-download-test.html</code> which provides a user-friendly interface to test the PDF export functionality with proper authentication.</p>
+    </div>
+</body>
+</html>
